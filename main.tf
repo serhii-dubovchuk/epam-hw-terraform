@@ -124,3 +124,35 @@ resource "aws_instance" "app" {
     module.vpc.natgw_ids
   ]
 }
+
+
+resource "aws_elb" "app" {
+  name    = "epam-homework-elb"
+  subnets = module.vpc.public_subnets
+
+  security_groups = [
+    aws_security_group.lb_public_access.id
+  ]
+
+  listener {
+    instance_port     = 80
+    instance_protocol = "http"
+    lb_port           = 80
+    lb_protocol       = "http"
+  }
+
+  health_check {
+    healthy_threshold   = 3
+    unhealthy_threshold = 10
+    timeout             = 5
+    target              = "HTTP:80/"
+    interval            = 10
+  }
+
+  instances = [for i in aws_instance.app : i.id]
+
+  cross_zone_load_balancing   = true
+  idle_timeout                = 400
+  connection_draining         = true
+  connection_draining_timeout = 300
+}
